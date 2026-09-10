@@ -3218,6 +3218,14 @@ config: dict[str, Any] = {
             "anon": True,
             "inject_delay": 0,
         },
+        "TORRENTHAVEN": {
+            "link_dir_name": "",
+            "use_for_search": False,
+            "api_key": "",
+            "announce_url": "",
+            "anon": False,
+            "modq": False,
+        },
         "ULCX": {
             # Instead of using the tracker acronym for folder name when sym/hard linking, you can use a custom name
             "link_dir_name": "",

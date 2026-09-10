@@ -52,7 +52,7 @@ def fetch_remote_version(url: str = REMOTE_VERSION_URL) -> tuple[str | None, str
         request = urllib.request.Request(url, headers={"User-Agent": "Upload-Assistant-WebUI"})  # noqa: S310 -- validated HTTPS URL
         with urllib.request.urlopen(request, timeout=10) as response:  # noqa: S310 -- validated HTTPS URL
             content = response.read().decode("utf-8")
-    except OSError, UnicodeError, urllib.error.URLError:
+    except (OSError, UnicodeError, urllib.error.URLError):
         return None, None
     match = re.search(r'__version__\s*=\s*"([^"]+)"', content)
     return (match.group(1), content) if match else (None, None)
@@ -73,7 +73,7 @@ def fetch_release_history(url: str = RELEASES_API_URL) -> list[dict[str, object]
         )
         with urllib.request.urlopen(request, timeout=10) as response:  # noqa: S310 -- validated HTTPS URL
             payload = json.loads(response.read().decode("utf-8"))
-    except OSError, UnicodeError, ValueError, urllib.error.URLError, json.JSONDecodeError:
+    except (OSError, UnicodeError, ValueError, urllib.error.URLError, json.JSONDecodeError):
         return None
 
     if not isinstance(payload, list):
@@ -157,7 +157,7 @@ def fetch_unreleased_changes(
         )
         with urllib.request.urlopen(request, timeout=10) as response:  # noqa: S310 -- fixed HTTPS origin
             payload = json.loads(response.read().decode("utf-8"))
-    except OSError, UnicodeError, ValueError, urllib.error.URLError, json.JSONDecodeError:
+    except (OSError, UnicodeError, ValueError, urllib.error.URLError, json.JSONDecodeError):
         return None
 
     if not isinstance(payload, dict):
@@ -272,7 +272,7 @@ def _read_cache(state_dir: Path, cache_hours: float) -> tuple[str, str, float] |
         if time.time() - checked_at >= cache_hours * 3600:
             return None
         return remote_version, remote_content, float(checked_at)
-    except OSError, TypeError, ValueError, KeyError, json.JSONDecodeError:
+    except (OSError, TypeError, ValueError, KeyError, json.JSONDecodeError):
         return None
 
 
@@ -312,7 +312,7 @@ def _read_changelog_cache(
             return None
         safe_releases = [release for release in releases if isinstance(release, dict)]
         return safe_releases[:MAX_CHANGELOG_RELEASES], unreleased, float(checked_at)
-    except OSError, TypeError, ValueError, KeyError, json.JSONDecodeError:
+    except (OSError, TypeError, ValueError, KeyError, json.JSONDecodeError):
         return None
 
 

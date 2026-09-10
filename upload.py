@@ -1128,7 +1128,7 @@ def xxx_min_successful_uploads(meta: Meta, min_successful_uploads: int) -> int:
     """Cap XXX image uploads to its one-contact-sheet-per-video contract."""
     try:
         contact_sheet_count = int(meta.screens or 0)
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         contact_sheet_count = 0
     return min(min_successful_uploads, max(1, contact_sheet_count))
 
@@ -1366,14 +1366,14 @@ async def process_meta(meta: Meta, base_dir: str) -> bool:
         if meta.trackers_pass is not None:
             try:
                 meta.skip_uploading = int(meta.trackers_pass)
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 meta.skip_uploading = 1
         else:
             tracker_pass_checks = config["DEFAULT"].get("tracker_pass_checks")
             if isinstance(tracker_pass_checks, (int, str)):
                 try:
                     meta.skip_uploading = int(tracker_pass_checks)
-                except ValueError, TypeError:
+                except (ValueError, TypeError):
                     meta.skip_uploading = 1
             else:
                 meta.skip_uploading = 1
@@ -1381,7 +1381,7 @@ async def process_meta(meta: Meta, base_dir: str) -> bool:
     skip_uploading = meta.skip_uploading
     try:
         skip_uploading_int = int(skip_uploading) if skip_uploading else 0
-    except ValueError, TypeError:
+    except (ValueError, TypeError):
         skip_uploading_int = 0
 
     if successful_trackers < skip_uploading_int and not meta.debug:
@@ -2144,7 +2144,7 @@ def _read_update_notification_cache(cache_hours: float) -> tuple[str, str] | Non
         if time.time() - checked_at >= cache_hours * 3600:
             return None
         return remote_version, remote_content
-    except FileNotFoundError, OSError, TypeError, ValueError, KeyError, json.JSONDecodeError:
+    except (FileNotFoundError, OSError, TypeError, ValueError, KeyError, json.JSONDecodeError):
         return None
 
 
@@ -2208,7 +2208,7 @@ async def update_notification() -> str:
     cache_hours = config["DEFAULT"].get("update_notification_cache_hours", 4)
     try:
         cache_hours = max(0.0, float(cache_hours))
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         logger.warning("[yellow]Invalid update_notification_cache_hours; using 4 hours.[/yellow]")
         cache_hours = 4.0
 
@@ -2720,7 +2720,7 @@ async def do_the_thing(base_dir: str) -> None:
                 skip_uploading = meta.skip_uploading
                 try:
                     skip_uploading_int = int(skip_uploading) if skip_uploading else 0
-                except ValueError, TypeError:
+                except (ValueError, TypeError):
                     skip_uploading_int = 0
 
                 if successful_trackers < skip_uploading_int and not meta.debug:
@@ -3080,7 +3080,7 @@ async def process_cross_seeds(meta: Meta) -> None:
     common = Common(config)
     try:
         concurrency_limit = int(config.get("DEFAULT", {}).get("cross_seed_concurrency", 8))
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         concurrency_limit = 8
     semaphore = asyncio.Semaphore(max(1, concurrency_limit))
 
@@ -3198,7 +3198,7 @@ def run() -> None:
 
     try:
         asyncio.run(main())
-    except KeyboardInterrupt, SystemExit:
+    except (KeyboardInterrupt, SystemExit):
         if not _shutdown_requested:
             logger.info("\n[yellow]Shutting down...[/yellow]")
     except BaseException as e:
@@ -3212,7 +3212,7 @@ def run() -> None:
                 async def _cleanup_with_timeout() -> None:
                     try:
                         await asyncio.wait_for(cleanup_manager.cleanup(), timeout=10.0)
-                    except TimeoutError, asyncio.CancelledError:
+                    except (TimeoutError, asyncio.CancelledError):
                         logger.info("[yellow]Cleanup timed out or was cancelled, forcing exit...[/yellow]")
 
                 asyncio.run(_cleanup_with_timeout())

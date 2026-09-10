@@ -70,7 +70,7 @@ def _is_android() -> bool:
 def _is_usable_file(path: Path) -> bool:
     try:
         return path.is_file() and (os.name == "nt" or os.access(path, os.X_OK))
-    except OSError, ValueError:
+    except (OSError, ValueError):
         return False
 
 

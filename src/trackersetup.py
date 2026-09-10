@@ -150,6 +150,7 @@ STATIC_AUTH_TYPES = {
     "TORRENTLEECH": "other_api",
     "TOTHEGLORY": "cookies",
     "TVCHAOSUK": "other_api",
+    "TORRENTHAVEN": "unit3d_api",
     "ULCX": "unit3d_api",
     "UTOPIA": "unit3d_api",
     "XINGYUNGEPT": "cookies",
@@ -1142,7 +1143,7 @@ class TrackerSetup:
                     logger.info("  [yellow]The trumping torrent for this report seems to be in modq.....[/yellow]")
             try:
                 upload = cli_ui.ask_yes_no("Do you want to proceed with the upload anyway?", default=False)
-            except EOFError, KeyboardInterrupt:
+            except (EOFError, KeyboardInterrupt):
                 logger.info("[yellow]Prompt cancelled; treating as 'no' for safety.[/yellow]")
                 upload = False
 
@@ -1159,7 +1160,7 @@ class TrackerSetup:
             logger.info(f"[yellow]{tracker} requires comparisons to be provided for trump reports.\nAre the comparison images in the description or are you adding links?")
             try:
                 where_compare = cli_ui.ask_string("Enter 'd' if in description, 'L' if you want to paste links, or press Enter to skip trumping:", default="")
-            except EOFError, KeyboardInterrupt:
+            except (EOFError, KeyboardInterrupt):
                 logger.info("[yellow]Prompt cancelled; skipping trump report creation.[/yellow]")
                 return False
 
@@ -1171,7 +1172,7 @@ class TrackerSetup:
                 try:
                     reported_screenshots = cli_ui.ask_string("Paste screenshot links for the reported torrent (comma-separated):", default="")
                     trumping_screenshots = cli_ui.ask_string("Paste screenshot links for the trumping torrent (comma-separated):", default="")
-                except EOFError, KeyboardInterrupt:
+                except (EOFError, KeyboardInterrupt):
                     logger.info("[yellow]Prompt cancelled; skipping trump report creation.[/yellow]")
                     return False
 
@@ -1368,7 +1369,7 @@ class TrackerSetup:
             if not meta.tv_pack:
                 try:
                     user_message = cli_ui.ask_string("Enter a reason for the trump report on LST:")
-                except EOFError, KeyboardInterrupt:
+                except (EOFError, KeyboardInterrupt):
                     logger.info("[yellow]Prompt cancelled; no additional message provided.[/yellow]")
                     user_message = None
                 message = message + ": " + user_message if user_message else message + ": No additional message provided by user"
@@ -1490,6 +1491,7 @@ tracker_class_map: Any = LazyTrackerDict(
         "TORRENTLEECH": ("src.trackers.torrentleech", "TorrentLeech"),
         "TOTHEGLORY": ("src.trackers.totheglory", "ToTheGlory"),
         "TVCHAOSUK": ("src.trackers.tvchaosuk", "TVChaosUK"),
+        "TORRENTHAVEN": ("src.trackers.UNIT3D.torrenthaven", "TorrentHaven"),
         "ULCX": ("src.trackers.UNIT3D.ulcx", "ULCX"),
         "UTOPIA": ("src.trackers.UNIT3D.utopia", "Utopia"),
         "XINGYUNGEPT": ("src.trackers.NEXUSPHP.xingyungept", "XingyungePT"),

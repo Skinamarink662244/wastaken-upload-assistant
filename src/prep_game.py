@@ -245,7 +245,7 @@ def select_gazelle_candidate(candidates: list[dict[str, Any]], title: str, meta:
     choices.append(skip_choice)
     try:
         choice = cli_ui.ask_choice("Select the correct game from GazelleGames:", choices=choices)
-    except EOFError, KeyboardInterrupt:
+    except (EOFError, KeyboardInterrupt):
         logger.info("[yellow]GazelleGames selection cancelled.[/yellow]")
         return None
     if choice == skip_choice:
@@ -714,7 +714,7 @@ def apply_igdb_extended_metadata(meta: Meta, game: dict[str, Any]) -> None:
     ):
         try:
             score = float(game.get(score_key))
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             continue
         if math.isfinite(score) and 0 <= score <= 100:
             item: dict[str, Any] = {"score": round(score, 1), "max": 100}

@@ -494,7 +494,7 @@ class BrasilTracker:
 
                 width_num = round((16 / 9) * height_num)
                 width = str(width_num)
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 pass
 
         else:
@@ -833,7 +833,7 @@ class BrasilTracker:
 
                 try:
                     size_in_gb = meta.bdinfo["size"]
-                except KeyError, IndexError, TypeError:
+                except (KeyError, IndexError, TypeError):
                     size_in_gb = 0
 
                 if size_in_gb > 66:

@@ -72,7 +72,7 @@ def _normalized_rating(value: Any, *, maximum: int) -> dict[str, Any] | None:
         return None
     try:
         score = float(value.get("score"))
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return None
     if not math.isfinite(score) or score < 0 or score > maximum:
         return None
@@ -248,7 +248,7 @@ class GazelleGamesManager:
         year = group.get("year") or group.get("Year")
         try:
             normalized_year = int(year)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             normalized_year = 0
         if normalized_year > 0:
             metadata["year"] = normalized_year
@@ -361,7 +361,7 @@ class GazelleGamesManager:
             metadata["game_release_edition"] = edition
         try:
             edition_year = int(torrent.get("remasterYear") or torrent.get("RemasterYear") or 0)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             edition_year = 0
         if edition_year > 0:
             metadata["game_release_edition_year"] = edition_year
