@@ -760,8 +760,14 @@ async def validate_media(_prep_instance: Any, meta: Meta) -> None:
             logger.info(f"[red]MediaInfo validation failed: {e!s}[/red]")
             raise
         if not valid_mi:
-            logger.info("[red]MediaInfo validation failed. This file does not contain (Unique ID).")
             meta.valid_mi = False
+            _uid_cfg = getattr(_prep_instance, "config", {}) or {}
+            _uid_default = _uid_cfg.get("DEFAULT", {}) if isinstance(_uid_cfg, dict) else {}
+            if bool(_uid_default.get("cancel_if_no_unique_id", True)):
+                logger.info("[bold red]Cancelling: this file has no Unique ID in its MediaInfo (General track).[/bold red]")
+                logger.info("[red]A valid MKV Unique ID is required to upload. Nothing was uploaded.[/red]")
+                raise Exception("Cancelled: MediaInfo General track has no Unique ID")
+            logger.info("[red]MediaInfo validation failed. This file does not contain (Unique ID).")
             await asyncio.sleep(2)
 
     mediainfo_tracks = meta.mediainfo.get("media", {}).get("track") or []

@@ -243,10 +243,61 @@ class Clients(QbittorrentClientMixin, RtorrentClientMixin, DelugeClientMixin, Tr
                     logger.info(f"[cyan]Waiting {inject_delay} seconds before adding to client '{client_name}'[/cyan]")
             await asyncio.sleep(inject_delay)
 
+    async def _search_directory_for_torrent(self, meta: Meta) -> str | None:
+        """Reuse a .torrent found in the content's own directory (or dirs listed in
+        DEFAULT 'torrent_dir_search'), matched by file layout + total size. Lets UA
+        skip hashing when a valid .torrent already sits next to the media, without
+        the release needing to be loaded in a torrent client. Toggle with DEFAULT
+        'search_torrent_dir' (default True)."""
+        default_cfg = self.config.get("DEFAULT", {})
+        if isinstance(default_cfg, dict) and not default_cfg.get("search_torrent_dir", True):
+            return None
+        meta_path = meta.path
+        if not meta_path:
+            return None
+        content = Path(str(meta_path))
+        search_dirs: list[Path] = [content if content.is_dir() else content.parent]
+        extra_dirs = default_cfg.get("torrent_dir_search", []) if isinstance(default_cfg, dict) else []
+        if isinstance(extra_dirs, list):
+            search_dirs.extend(Path(str(d)) for d in extra_dirs if d)
+        try:
+            expected_size = meta.get("source_size") or (content.stat().st_size if content.is_file() else None)
+        except Exception:
+            expected_size = None
+        seen: set[str] = set()
+        for directory in search_dirs:
+            try:
+                if not directory.is_dir():
+                    continue
+                for torrent_file in sorted(directory.glob("*.torrent")):
+                    key = str(torrent_file)
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    try:
+                        candidate = Torrent.read(key)
+                        infohash = candidate.infohash
+                    except Exception:
+                        continue
+                    if expected_size and candidate.size and int(candidate.size) != int(expected_size):
+                        continue
+                    valid, _ = await self.is_valid_torrent(meta, key, infohash, "qbit", {})
+                    if valid:
+                        logger.info(f"[bold green]Reusing local .torrent from directory: [yellow]{torrent_file}")
+                        return key
+            except Exception as error:
+                logger.debug(f"[yellow]Directory torrent scan error in {directory}: {error}[/yellow]")
+        return None
+
     async def find_existing_torrent(self, meta: Meta) -> str | None:
         """Find a reusable torrent matching the prepared metadata."""
         if meta.get("skip_auto_torrent", False):
             return None
+
+        directory_match = await self._search_directory_for_torrent(meta)
+        if directory_match:
+            meta.reuse_torrent_client = None
+            return directory_match
 
         # Determine piece size preferences
         piece_limit = bool(self.config["DEFAULT"].get("prefer_max_16_torrent", False))

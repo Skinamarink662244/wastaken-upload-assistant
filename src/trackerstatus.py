@@ -95,7 +95,7 @@ class TrackerStatusManager:
 
         async def process_single_tracker(tracker_name: str, shared_meta: Meta) -> tuple[str, dict[str, bool], str | None, Any]:
             local_meta = copy.deepcopy(shared_meta)  # Ensure each task gets its own copy of meta
-            local_tracker_status = {"banned": False, "skipped": False, "dupe": False, "upload": False, "other": False}
+            local_tracker_status = {"banned": False, "skipped": False, "dupe": False, "upload": False, "other": False, "skip_reason": ""}
             display_name = None
             tracker_class = None
 
@@ -117,6 +117,7 @@ class TrackerStatusManager:
 
                 if local_meta["tracker_status"][tracker_name].get("skip_upload"):
                     local_tracker_status["skipped"] = True
+                    local_tracker_status["skip_reason"] = "tracker marked skip_upload earlier in processing"
                 elif "skipped" not in local_meta and not local_tracker_status["skipped"]:
                     local_tracker_status["skipped"] = False
 
@@ -153,6 +154,8 @@ class TrackerStatusManager:
                 if not local_tracker_status["banned"] and not local_tracker_status["skipped"]:
                     claimed = await tracker_setup.get_torrent_claims(local_meta, tracker_name)
                     local_tracker_status["skipped"] = bool(claimed)
+                    if claimed and not local_tracker_status["skip_reason"]:
+                        local_tracker_status["skip_reason"] = "release appears to be claimed/requested on this tracker (get_torrent_claims)"
 
                     if tracker_name not in {"PASSTHEPOPCORN"} and not local_tracker_status["skipped"]:
                         if hasattr(tracker_class, "get_additional_checks"):
@@ -164,6 +167,7 @@ class TrackerStatusManager:
                                 should_continue = tracker_class.get_additional_checks(local_meta)
                             if not should_continue:
                                 local_tracker_status["skipped"] = True
+                                local_tracker_status["skip_reason"] = "failed the tracker's content/eligibility pre-checks (get_additional_checks; see its messages above)"
                                 local_meta.skipping = tracker_name
 
                         if not local_tracker_status["skipped"]:
@@ -211,6 +215,7 @@ class TrackerStatusManager:
                                 should_continue = ptp.get_additional_checks(local_meta)
                             if not should_continue:
                                 local_tracker_status["skipped"] = True
+                                local_tracker_status["skip_reason"] = "failed the tracker's content/eligibility pre-checks (get_additional_checks; see its messages above)"
                                 local_meta.skipping = tracker_name
 
                         if not local_tracker_status["skipped"]:
@@ -333,7 +338,11 @@ class TrackerStatusManager:
                 passed_trackers.append((tracker_name, display_name, tracker_class))
 
         if skipped_trackers:
-            logger.info(f"[red]Skipped due to specific tracker conditions: [bold yellow]{', '.join(skipped_trackers)}[/bold yellow].")
+            logger.info("[red]Skipped due to specific tracker conditions:[/red]")
+            for _skip_name in skipped_trackers:
+                _skip_status = tracker_status.get(_skip_name) or {}
+                _skip_reason = _skip_status.get("skip_reason") or "tracker-specific condition (see the messages above for the tracker's own note)"
+                logger.info(f"  [bold yellow]{_skip_name}[/bold yellow]: [red]{_skip_reason}[/red]")
         if dupe_trackers:
             logger.info(f"[red]Found potential dupes on: [bold yellow]{', '.join(dupe_trackers)}[/bold yellow].\n")
 

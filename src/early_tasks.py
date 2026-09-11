@@ -78,6 +78,26 @@ def is_usenet_only(meta: Meta) -> bool:
     return bool(normalized) and all(tracker in ("USENET", "MANUAL") or getattr(tracker_class_map.get(tracker), "is_usenet", False) for tracker in normalized)
 
 
+async def _search_trackers_for_reuse(meta: Meta, client: Clients) -> str | None:
+    """Search configured trackers for a reusable .torrent before hashing.
+
+    Returns a validated .torrent path to reuse, or None to let mkbrr proceed.
+    Imported lazily to avoid an import cycle and to keep the feature optional.
+    """
+    try:
+        from src.torrentsearch import find_torrent_on_trackers
+    except Exception as error:  # pragma: no cover - defensive
+        logger.debug(f"[cyan]Tracker torrent search unavailable: {error}[/cyan]")
+        return None
+    try:
+        return await find_torrent_on_trackers(meta, client.config, client)
+    except asyncio.CancelledError:
+        raise
+    except Exception as error:
+        logger.warning(f"[yellow]Tracker torrent search failed; falling back to mkbrr: {error}[/yellow]")
+        return None
+
+
 async def create_base_torrents_early(meta: Meta, client: Clients) -> None:
     """Reuse or hash BASE torrents while metadata and screenshots are processed."""
     task_started = time.perf_counter()
@@ -105,8 +125,17 @@ async def create_base_torrents_early(meta: Meta, client: Clients) -> None:
             created_path = await TorrentCreator.create_base_from_existing_torrent(reuse_torrent, meta.base_dir, meta.uuid)
             logger.debug(f"[cyan]Early base torrent creation completed in {time.perf_counter() - base_creation_started:.2f}s: {created_path or 'no file created'}[/cyan]")
         else:
-            logger.debug("[cyan]No reusable client torrent found; creating BASE torrent while metadata and screenshots are processed.[/cyan]")
-            await TorrentCreator.create_torrent(meta, Path(cast(str, meta.path)), "BASE")
+            # No local/client copy — search every configured tracker for the
+            # release and reuse its .torrent (skips hashing) before mkbrr.
+            tracker_reuse = await _search_trackers_for_reuse(meta, client)
+            if tracker_reuse and Path(tracker_reuse).exists():
+                meta.reuse_torrent_path = tracker_reuse
+                base_creation_started = time.perf_counter()
+                created_path = await TorrentCreator.create_base_from_existing_torrent(tracker_reuse, meta.base_dir, meta.uuid)
+                logger.debug(f"[cyan]Early base torrent creation from tracker copy completed in {time.perf_counter() - base_creation_started:.2f}s: {created_path or 'no file created'}[/cyan]")
+            else:
+                logger.debug("[cyan]No reusable client or tracker torrent found; creating BASE torrent while metadata and screenshots are processed.[/cyan]")
+                await TorrentCreator.create_torrent(meta, Path(cast(str, meta.path)), "BASE")
         if meta.subtitle_files and not subs_torrent_path.exists():
             await TorrentCreator.create_torrent(meta, Path(cast(str, meta.path)), "BASE_SUBS")
         logger.debug(f"[cyan]Early torrent task completed in {time.perf_counter() - task_started:.2f}s[/cyan]")
