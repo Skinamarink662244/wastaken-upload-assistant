@@ -75,6 +75,26 @@ def _safe_game_field(value: Any) -> str:
     return " ".join(text.replace("[", "").replace("]", "").split())
 
 
+def _clean_description_text(value: Any) -> str:
+    """Remove serialization escapes that may be returned in synopsis text."""
+    text = str(value or "").strip()
+
+    # Some providers return the complete synopsis as a JSON string literal.
+    if len(text) >= 2 and text[0] == text[-1] == '"':
+        try:
+            decoded = json.loads(text)
+        except (json.JSONDecodeError, TypeError):
+            pass
+        else:
+            if isinstance(decoded, str):
+                text = decoded.strip()
+
+    text = html.unescape(text)
+
+    # Handle partially escaped payloads as well (for example, ``\\"text\\"``).
+    return text.replace(r"\"", '"').replace(r"\/", "/")
+
+
 def _safe_game_url(value: Any) -> str:
     url = str(value or "").strip()
     parsed = urllib.parse.urlparse(url)
@@ -425,6 +445,8 @@ class DescriptionBuilder:
                 episode_tmdb_data = meta.episode_tmdb_data
                 title = episode_tmdb_data.get("name", "")
                 overview = episode_tmdb_data.get("overview", "")
+                if overview:
+                    overview = _clean_description_text(html_to_bbcode(str(overview)))
                 return title, overview
 
             tvmaze_episode_data = meta.tvmaze_episode_data
@@ -437,6 +459,7 @@ class DescriptionBuilder:
             # Convert HTML tags to BBCode
             if overview:
                 overview = html_to_bbcode(overview)
+                overview = _clean_description_text(overview)
 
             episode_name = tvmaze_episode_data.get("episode_name", "")
             episode_title = meta.auto_episode_title or (episode_name if (not episode_name.lower().startswith("episode") and "tba" not in episode_name.lower()) else "")
@@ -802,6 +825,7 @@ class DescriptionBuilder:
         if overview:
             overview = html_to_bbcode(overview)
             overview = re.sub(r"<[^>]+>", "", overview).strip()
+            overview = _clean_description_text(overview)
 
         # Collect key-value pairs
         fields: list[tuple[str, str]] = []
@@ -1021,6 +1045,7 @@ class DescriptionBuilder:
         if overview:
             overview = html_to_bbcode(str(overview))
             overview = re.sub(r"<[^>]+>", "", overview).strip()
+            overview = _clean_description_text(overview)
 
         if overview:
             overview_text = f"\n{header}{str_overview}{header_end}\n{overview}\n"
@@ -1405,6 +1430,8 @@ class DescriptionBuilder:
         if bluray:
             release_url, cover_images = await self.get_bluray_section(meta)
             if release_url:
+                if self.tracker not in ("TORRENTLEECH", "IMMORTALSEED"):
+                    release_url = f"[url]{release_url}[/url]"
                 desc_parts.append(f"[center]{release_url}[/center]")
             if cover_images:
                 desc_parts.append(f"[center]{cover_images}[/center]\n")
@@ -2145,11 +2172,6 @@ class DescriptionBuilder:
 
             # If screens_per_row is set, use that to determine how many screenshots should be on each row. Otherwise, use 2 as default
             screens_per_row = self._get_int_config("screens_per_row", 2)
-            if self.tracker == "HAWKEUNO":
-                width = self._get_int_config("thumbnail_size", 350)
-                # Adjust screens_per_row to keep total width below 1100
-                while screens_per_row * width > 1100 and screens_per_row > 1:
-                    screens_per_row -= 1
         except Exception:
             screens_per_row = 2
         return screens_per_row
@@ -2195,20 +2217,9 @@ class DescriptionBuilder:
         if not thumb_size:
             thumb_size = self._get_int_config("thumbnail_size", 350)
 
-        nexusphp_trackers = {
-            "1PTBA",
-            "LAJIDUI",
-            "LEMONHD",
-            "LONGPT",
-            "PTCAFE",
-            "PTFANS",
-            "PTGTK",
-            "PTZONE",
-            "RAILGUNPT",
-            "XINGYUNGEPT",
-            "NEXUSPHP",
-        }
-        if self.tracker in nexusphp_trackers:
+        from src.trackersetup import get_tracker_framework
+
+        if get_tracker_framework(self.tracker) == "NEXUSPHP":
             return f"[img]{raw_url}[/img]"
         if self.tracker == "HDTORRENTS":
             return f"<a href='{raw_url}'><img src='{img_url}' height=137></a> "
@@ -2226,6 +2237,15 @@ class DescriptionBuilder:
 
     def tracker_specific_formats(self, tracker: str, description: str) -> str:
         bbcode = BBCODE()
+        from src.trackersetup import get_tracker_framework
+
+        if get_tracker_framework(tracker) == "NEXUSPHP":
+            description = bbcode.remove_img_resize(description)
+
+        if tracker in {"ANTHELION", "BJSHARE", "BRASILTRACKER", "GREATPOSTERWALL"}:
+            description = bbcode.clamp_size_tags(description)
+            description = bbcode.convert_named_colors(description)
+
         if tracker == "BRASILTRACKER":
             description = bbcode.remove_img_resize(description)
             description = bbcode.remove_list(description)
@@ -2334,7 +2354,7 @@ class DescriptionBuilder:
             description = bbcode.remove_img_resize(description)
             description = bbcode.convert_comparison_to_centered(description, 1000)
             description = bbcode.remove_spoiler(description)
-            description = bbcode.remove_color(description)
+            description = bbcode.convert_hex_colors_to_named(description)
 
             # Apply custom image line breaks for HDSPACE: if "imgbox" is not in the web_url, place only one image per line.
             def hds_image_formatter(match) -> str:
@@ -2387,7 +2407,7 @@ class DescriptionBuilder:
             description = bbcode.remove_spoiler(description)
             description = bbcode.remove_list(description)
 
-        if tracker == "PTSKIT":
+        if get_tracker_framework(tracker) == "NEXUSPHP":
             description = description.replace("[user]", "").replace("[/user]", "")
             description = description.replace("[align=left]", "").replace("[/align]", "")
             description = description.replace("[right]", "").replace("[/right]", "")
@@ -2403,6 +2423,7 @@ class DescriptionBuilder:
             description = description.replace("[ul]", "").replace("[/ul]", "")
             description = description.replace("[ol]", "").replace("[/ol]", "")
             description = description.replace("[hide]", "").replace("[/hide]", "")
+            description = bbcode.remove_img_resize(description)
             description = re.sub(r"\[center\]\[spoiler=.*? NFO:\]\[code\](.*?)\[/code\]\[/spoiler\]\[/center\]", r"", description, flags=re.DOTALL)
             description = bbcode.convert_comparison_to_centered(description, 1000)
             description = bbcode.remove_spoiler(description)
@@ -2437,9 +2458,7 @@ class DescriptionBuilder:
             # Strip BBCode names and attributes while retaining their contents.
             description = re.sub(r"\[/?[a-z][a-z0-9_-]*(?:=[^\]]*|\s+[^\]]*)?\]|\[\*\]", "", description, flags=re.IGNORECASE)
 
-        from src.trackersetup import api_trackers as unit3d_trackers
-
-        if tracker in unit3d_trackers:
+        if get_tracker_framework(tracker) == "UNIT3D":
             description = bbcode.convert_hide_to_spoiler(description)
             description = description.replace("[user]", "").replace("[/user]", "")
             description = description.replace("[hr]", "").replace("[/hr]", "")

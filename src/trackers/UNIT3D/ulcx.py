@@ -7,6 +7,7 @@ import aiofiles
 from src.console import logger
 from src.get_desc import DescriptionBuilder
 from src.meta import Meta
+from src.trackers.naming import add_incomplete_pack_marker
 from src.trackers.UNIT3D import UNIT3D
 
 Config = dict[str, Any]
@@ -129,8 +130,9 @@ class ULCX(UNIT3D):
         # Section 4.3.1.1: Encodes min resolution 720p
         if meta.type == "ENCODE":
             height = meta.video_height or 0
-            if height > 0 and height < 720:
-                logger.info(f"{self.tracker}: [bold red]Encodes must be at least 720p resolution. Standard definition encodes are forbidden.[/bold red]")
+            width = meta.video_width or 0
+            if (height and height < 720) or (width and width < 1280):
+                logger.info(f"{self.tracker}: [bold red]Encodes resolution must be at least 1280x720. Standard definition encodes are forbidden.[/bold red]")
                 return False
 
         # Section 4.3.1.6 & 4.3.1.7: Codec Restrictions for Encodes
@@ -305,4 +307,4 @@ class ULCX(UNIT3D):
         if meta.type == "WEBDL" and ("hybrid" in meta.edition.lower() or meta.webdv):
             ulcx_name = ulcx_name.replace("Hybrid ", "", 1)
 
-        return {"name": ulcx_name}
+        return {"name": add_incomplete_pack_marker(ulcx_name, meta, self.tracker)}

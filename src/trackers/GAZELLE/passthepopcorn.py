@@ -28,7 +28,7 @@ from src.rehostimages import ImageHostPolicy, RehostImagesManager
 from src.screenshot_manifest import files as manifest_files
 from src.takescreens import TakeScreensManager
 from src.temp_paths import artwork_dir, screenshots_dir
-from src.torrentcreate import TorrentCreator
+from src.torrent_policy import PASSTHEPOPCORN_POLICY
 from src.tracker_images import get_tracker_image_collection
 from src.trackers.common import Common
 from src.uploadscreens import UploadScreensManager
@@ -135,6 +135,7 @@ class PassThePopcorn:
         ("Vietnamese", "vie", "vi"): 25,
     }
     supported_categories = ("MOVIE",)
+    torrent_policy = PASSTHEPOPCORN_POLICY
     tracker_urls = ("passthepopcorn.me",)
 
     def __init__(self, config: dict[str, Any]) -> None:
@@ -844,7 +845,24 @@ class PassThePopcorn:
         desc = desc.replace("[ul]", "").replace("[/ul]", "")
         desc = desc.replace("[ol]", "").replace("[/ol]", "")
         desc = re.sub(r"\[(?:font(?:=[^\]]*)?|/font)\]", "", desc, flags=re.IGNORECASE)
-        return re.sub(r"\[img=[^\]]+\]", "[img]", desc)
+        desc = re.sub(r"\[img=[^\]]+\]", "[img]", desc)
+        return BBCODE().clamp_size_tags(desc)
+
+    def _description_images(self, meta: Meta) -> list[dict[str, Any]]:
+        if meta.skip_imghost_upload:
+            return []
+
+        screenshots = get_tracker_image_collection(meta, self.tracker, "screenshots")
+        if not meta.is_disc:
+            return cast(list[dict[str, Any]], screenshots)
+
+        menu_images = get_tracker_image_collection(meta, self.tracker, "menu_images")
+        return cast(list[dict[str, Any]], [*menu_images, *screenshots])
+
+    def _description_image_limit(self, meta: Meta, screenshot_limit: int) -> int:
+        if not meta.is_disc:
+            return screenshot_limit
+        return screenshot_limit + len(get_tracker_image_collection(meta, self.tracker, "menu_images"))
 
     async def edit_desc(self, meta: Meta) -> None:
         from src.description_review import get_base_description
@@ -864,8 +882,7 @@ class PassThePopcorn:
             multi_screens = 2
             logger.info(f"{self.tracker}: [yellow]requires at least 2 screenshots for multi disc/file content, overriding config")
 
-        image_list_value: Any = get_tracker_image_collection(meta, self.tracker, "screenshots") if not meta.skip_imghost_upload else []
-        image_list = cast(list[dict[str, Any]], image_list_value) if isinstance(image_list_value, list) else []
+        image_list = self._description_images(meta)
         images: list[dict[str, Any]] = image_list
 
         # Check for saved pack_image_links.json file
@@ -957,7 +974,7 @@ class PassThePopcorn:
                         desc.write("\n\n")
                 except Exception as e:
                     logger.warning(f"{self.tracker}: [yellow]Warning: Error setting tonemapped header: {e!s}[/yellow]")
-                for img_index in range(len(images[: meta.screens])):
+                for img_index in range(len(images[: self._description_image_limit(meta, meta.screens)])):
                     raw_url = str(image_list[img_index].get("raw_url", ""))
                     desc.write(f"[img]{raw_url}[/img]\n")
                 desc.write("\n")
@@ -969,7 +986,7 @@ class PassThePopcorn:
                 if base2ptp.strip() != "":
                     desc.write(base2ptp)
                     desc.write("\n\n")
-                for img_index in range(len(images[: meta.screens])):
+                for img_index in range(len(images[: self._description_image_limit(meta, meta.screens)])):
                     raw_url = image_list[img_index]["raw_url"]
                     desc.write(f"[img]{raw_url}[/img]\n")
                 desc.write("\n")
@@ -1055,7 +1072,7 @@ class PassThePopcorn:
                                 desc.write("\n\n")
                         except Exception as e:
                             logger.warning(f"{self.tracker}: [yellow]Warning: Error setting tonemapped header: {e!s}[/yellow]")
-                        for img_index in range(min(multi_screens, len(image_list))):
+                        for img_index in range(min(self._description_image_limit(meta, multi_screens), len(image_list))):
                             raw_url = str(image_list[img_index].get("raw_url", ""))
                             desc.write(f"[img]{raw_url}[/img]\n")
                         desc.write("\n")
@@ -1115,7 +1132,7 @@ class PassThePopcorn:
                         if base2ptp.strip() != "":
                             desc.write(base2ptp)
                             desc.write("\n\n")
-                        for img_index in range(min(multi_screens, len(image_list))):
+                        for img_index in range(min(self._description_image_limit(meta, multi_screens), len(image_list))):
                             raw_url = image_list[img_index]["raw_url"]
                             desc.write(f"[img]{raw_url}[/img]\n")
                         desc.write("\n")
@@ -1211,7 +1228,7 @@ class PassThePopcorn:
             except Exception as e:
                 logger.warning(f"{self.tracker}: [yellow]Warning: Error setting tonemapped header: {e!s}[/yellow]")
 
-            for img_index in range(len(images[: meta.screens])):
+            for img_index in range(len(images[: self._description_image_limit(meta, meta.screens)])):
                 raw_url = image_list[img_index]["raw_url"]
                 desc.write(f"[img]{raw_url}[/img]\n")
             desc.write("\n")
@@ -1237,7 +1254,7 @@ class PassThePopcorn:
                             desc.write("\n\n")
                     except Exception as e:
                         logger.warning(f"{self.tracker}: [yellow]Warning: Error setting tonemapped header: {e!s}[/yellow]")
-                    for img_index in range(min(multi_screens, len(image_list))):
+                    for img_index in range(min(self._description_image_limit(meta, multi_screens), len(image_list))):
                         raw_url = image_list[img_index]["raw_url"]
                         desc.write(f"[img]{raw_url}[/img]\n")
                     desc.write("\n")
@@ -1627,26 +1644,8 @@ class PassThePopcorn:
 
     async def upload(self, meta: Meta, url: str, data: dict[str, Any]) -> bool:
         common = Common(config=self.config)
-        base_piece_mb = meta.base_torrent_piece_mb or 0
         torrent_file_path = f"{meta.base_dir}{'/' + 'tmp' + '/'}{meta.uuid}/[{self.tracker}].torrent"
-
-        # Check if the piece size exceeds 16 MiB and regenerate the torrent if needed
-        if base_piece_mb > 16 and not meta.nohash:
-            logger.info(f"{self.tracker}: [red]Piece size is OVER 16M and does not work on PassThePopcorn. Generating a new .torrent")
-            tracker_url = self.announce_url.strip() if self.announce_url else "https://fake.tracker"
-            piece_size = 16
-            torrent_create = f"[{self.tracker}]"
-            try:
-                cooldown = int(self.config.get("DEFAULT", {}).get("rehash_cooldown", 0) or 0)
-            except (ValueError, TypeError):
-                cooldown = 0
-            if cooldown > 0:
-                await asyncio.sleep(cooldown)  # Small cooldown before rehashing
-
-            await TorrentCreator.create_torrent(meta, str(meta.path), torrent_create, tracker_url=tracker_url, piece_size=piece_size)
-            await common.create_torrent_for_upload(meta, self.tracker, self.source_flag, torrent_filename=torrent_create)
-        else:
-            await common.create_torrent_for_upload(meta, self.tracker, self.source_flag)
+        await common.create_torrent_for_upload(meta, self.tracker, self.source_flag)
 
         # Proceed with the upload process
         async with aiofiles.open(torrent_file_path, "rb") as torrent_file_handle:

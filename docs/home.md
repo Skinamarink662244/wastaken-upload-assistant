@@ -1,6 +1,8 @@
 [Configuration](configuration.md)
+[Screenshot Overlays](screenshot-overlays.md)
 [Custom Hooks](custom-hooks.md)
 [Upload Order and qBittorrent Bandwidth Control](upload-order-and-bandwidth-control.md)
+[XXX Category Upload Guide](xxx-upload.md)
 
 [WebUI](web-ui.md)
 [WebUI Quick Start](web-ui-basic.md)

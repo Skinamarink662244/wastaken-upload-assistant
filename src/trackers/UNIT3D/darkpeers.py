@@ -12,7 +12,8 @@ from src.languages import languages_manager
 from src.meta import Meta
 from src.music.models import MusicRelease
 from src.music.validation import MusicValidator, ValidationLevel
-from src.tmdb import TmdbManager, get_tmdb_localized_data
+from src.tmdb import TmdbManager
+from src.trackers.naming import add_incomplete_pack_marker
 from src.trackers.UNIT3D import UNIT3D
 
 
@@ -89,7 +90,6 @@ class DarkPeers(UNIT3D):
         "VXT",
         "WAF",
         "WKS",
-        "XDMovies",
         "X0r",
         "YIFY",
         "YTS",
@@ -435,13 +435,9 @@ class DarkPeers(UNIT3D):
         if meta.category == "BOOK":
             return {"name": self._book_name(meta)}
 
-        # DarkPeers wants the naming guide followed for Movie/TV even on scene releases, so use
-        # the guide-formatted core name there; other categories (e.g. Games) keep their recorded
-        # scene release name.
-        if meta.category in {"MOVIE", "TV"}:
-            dp_name = str(meta.name or "")
-        else:
-            dp_name = str(meta.scene_name or meta.name or "")
+        # DP prohibits retags.  When the preparation stage identified a scene
+        # release, submit its recorded release name rather than rebuilding it.
+        dp_name = str(meta.name or "")
 
         if meta.category == "TV":
             dp_name = await self._tv_name(meta, dp_name)
@@ -450,63 +446,17 @@ class DarkPeers(UNIT3D):
         if audio and audio != "SKIPPED" and "Dual-Audio" in dp_name:
             dp_name = dp_name.replace("Dual-Audio", audio)
 
-        return {"name": dp_name}
+        return {"name": add_incomplete_pack_marker(dp_name, meta, self.tracker)}
 
     async def _tv_name(self, meta: Meta, name: str) -> str:
-        tmdb_title = await self._tmdb_en_title(meta)
-        marker = f"{meta.season or ''}{meta.episode or ''}".strip()
-        if not marker or marker not in name:
-            # No season/episode marker to splice against: keep the resolved title and only
-            # drop the year unless it disambiguates.
-            title = str(meta.title or "").strip()
-            year = str(meta.year or "").strip()
-            if year and not await self._tv_title_needs_year(meta):
-                name = re.sub(rf"^({re.escape(title)})\s+{re.escape(year)}(?=\s|$)", r"\1", name, count=1, flags=re.IGNORECASE)
-            return " ".join(name.split())
+        title = str(meta.title or "").strip()
+        year = str(meta.year or "").strip()
+        if year and not await self._tv_title_needs_year(meta):
+            name = re.sub(rf"^({re.escape(title)})\s+{re.escape(year)}(?=\s|$)", r"\1", name, count=1, flags=re.IGNORECASE)
+        return " ".join(name.split())
 
-        # Rebuild the head as title -> AKA -> year, leaving the marker and everything after it intact.
-        aka = "" if meta.no_aka else self._localized_aka(meta, tmdb_title)
-        year = str(meta.year or "").strip() if (not meta.no_year and await self._tv_title_needs_year(meta, tmdb_title)) else ""
-        tail = name.partition(marker)[2]
-        lead = " ".join(part for part in (tmdb_title, aka, year) if part)
-        return " ".join(f"{lead} {marker}{tail}".split())
-
-    async def _tmdb_en_title(self, meta: Meta) -> str:
-        """Canonical TMDB (en-US) title.
-
-        The core replaces meta.title with the TVDB series name for non-English-origin TV;
-        this site wants the TMDB title, matching what its metadata panel displays.
-        """
-        try:
-            tmdb_main = await get_tmdb_localized_data(meta, data_type="main", language="en-US", append_to_response="")
-        except Exception:  # noqa: BLE001 - a naming lookup must never abort the upload
-            tmdb_main = {}
-        data = tmdb_main if isinstance(tmdb_main, dict) else {}
-        title = str(data.get("name") or data.get("title") or "").strip()
-        return title or str(meta.title or "").strip()
-
-    @staticmethod
-    def _localized_aka(meta: Meta, tmdb_title: str) -> str:
-        """AKA sourced from IMDb.
-
-        English-origin shows use IMDb's display title (when it differs from the TMDB title);
-        every other origin uses IMDb's romanized original title (its ``aka``), never TMDB's
-        native-language alternate. Suppressed when it just echoes the title.
-        """
-        imdb_info = meta.imdb_info if isinstance(meta.imdb_info, dict) else {}
-        original_language = str(meta.original_language or "").strip().lower()
-        original_language = original_language.split("-")[0].split("(")[0].strip()
-        is_english = original_language in ("en", "eng", "english")
-        aka_source = imdb_info.get("title") if is_english else imdb_info.get("aka")
-        aka = str(aka_source or "").strip()
-        if not aka:
-            return ""
-        if aka.lower() == tmdb_title.lower() or aka.lower() in tmdb_title.lower():
-            return ""
-        return f"AKA {aka}"
-
-    async def _tv_title_needs_year(self, meta: Meta, title: str | None = None) -> bool:
-        title = str(title if title is not None else (meta.title or "")).strip()
+    async def _tv_title_needs_year(self, meta: Meta) -> bool:
+        title = str(meta.title or "").strip()
         api_key = str(self.config.get("DEFAULT", {}).get("tmdb_api", "")).strip()
         if not title or not api_key:
             return False
@@ -532,9 +482,10 @@ class DarkPeers(UNIT3D):
             if not isinstance(result_raw, dict):
                 continue
             result = cast(dict[str, Any], result_raw)
+            result_id = str(result.get("id", ""))
             names = (result.get("name"), result.get("original_name"))
             if any(" ".join(str(candidate or "").casefold().split()) == title_key for candidate in names):
-                matching_ids.add(str(result.get("id", "")))
+                matching_ids.add(result_id)
         matching_ids.discard("")
         return bool(matching_ids - {current_id}) if current_id else len(matching_ids) > 1
 
