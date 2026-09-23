@@ -1227,6 +1227,9 @@ async def process_meta(meta: Meta, base_dir: str) -> bool:
 
     editargs_tracking: tuple[str, ...] = ()
     previous_trackers = meta.trackers
+    _early_cue = get_early_artifact_tasks(meta.uuid)
+    if _early_cue is not None and not _early_cue[0].done():
+        logger.info("[cyan]↻ Base torrent still building in the background while you review…[/cyan]")
     try:
         confirm = await helper.get_confirmation(meta)
     except EOFError:

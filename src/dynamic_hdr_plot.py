@@ -64,7 +64,10 @@ def _fingerprint(sources: list[Path], formats: list[str]) -> str:
 
 
 def _run(command: list[str]) -> None:
-    result = subprocess.run(command, capture_output=True, text=True, check=False)  # noqa: S603
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=False, timeout=600)  # noqa: S603
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(f"{' '.join(command[:2])} timed out after 600s") from exc
     if result.returncode:
         detail = (result.stderr or result.stdout).strip()
         raise RuntimeError(detail or f"{' '.join(command[:2])} failed with exit code {result.returncode}")

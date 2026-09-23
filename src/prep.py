@@ -222,14 +222,18 @@ class Prep:
         # 6. Tracker and Existing Torrent Info
         await prep_helpers.process_trackers_and_torrent(self, meta, client, hash_ids, tracker_ids, search_term, search_file_folder)
 
-        # These tasks only create local artifacts. Posting and tracker upload
-        # decisions remain in the upload stage after duplicate checks.
-        await restart_early_artifact_tasks(meta, client, self.config)
-
         # 7. Sonarr, Radarr and Metadata Searches
         await prep_helpers.search_metadata(
             self, meta, filename, untouched_filename, videopath, search_term, search_file_folder, use_sonarr, use_radarr, skip_tracker_descriptions, client, bdinfo, mi
         )
+
+        # Start the base-torrent work (cross-tracker .torrent search, else hash)
+        # AFTER metadata resolves, so the tracker search can key on TMDB/IMDB ids
+        # for accurate matches instead of a weaker name-only lookup. These tasks
+        # only create local artifacts; posting and tracker-upload decisions remain
+        # in the upload stage. It runs in the background, overlapping the later
+        # interactive confirm prompts.
+        await restart_early_artifact_tasks(meta, client, self.config)
 
         # 8. Set Final Metadata and tags
         await prep_helpers.finalize_metadata(self, meta, videopath, bdinfo, mi, filename, untouched_filename, video)

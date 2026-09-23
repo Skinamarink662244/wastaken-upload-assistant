@@ -360,6 +360,29 @@ class TorrentCreator:
                         def run_mkbrr() -> int:
                             process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)  # noqa: S603
 
+                            # Optional watchdog: terminate a wedged mkbrr after DEFAULT
+                            # 'mkbrr_timeout' seconds (0 = disabled, the default). On kill
+                            # its stdout closes, the read loop ends, and the non-zero result
+                            # triggers the existing fallback to the torf method. The poll()
+                            # guard means a normal finish leaves the timer harmless.
+                            try:
+                                from data import config as _ua_cfg
+
+                                _mkbrr_timeout = max(0, int((_ua_cfg.config.get("DEFAULT", {}) or {}).get("mkbrr_timeout", 0) or 0))
+                            except Exception:
+                                _mkbrr_timeout = 0
+                            if _mkbrr_timeout > 0:
+                                import threading
+
+                                def _kill_wedged_mkbrr() -> None:
+                                    if process.poll() is None:
+                                        logger.warning(f"[yellow]mkbrr exceeded {_mkbrr_timeout}s; terminating and falling back to torf.[/yellow]")
+                                        process.kill()
+
+                                _watchdog = threading.Timer(_mkbrr_timeout, _kill_wedged_mkbrr)
+                                _watchdog.daemon = True
+                                _watchdog.start()
+
                             if process.stdout is None:
                                 return process.wait()
 
