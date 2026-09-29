@@ -19,6 +19,25 @@ def guessit_fn(value: str, options: dict[str, Any] | None = None) -> dict[str, A
     return cast(dict[str, Any], guessit_module.guessit(value, options))
 
 
+def _name_edition(video: str, filelist: list[str]) -> str:
+    """Edition explicitly declared in the release name (via guessit), if any.
+
+    Used to keep the IMDb duration-match heuristic from overriding an edition the
+    filename already states (e.g. a Theatrical Cut being relabelled as a
+    Director's Cut when their runtimes are within the matcher's leeway). The
+    name is authoritative; the duration guess is only a fallback for names that
+    don't declare a cut.
+    """
+    try:
+        name = Path(video).name if (filelist and len(filelist) == 1) else str(video)
+        value: Any = guessit_fn(name).get("edition", "")
+    except Exception:
+        return ""
+    if isinstance(value, list):
+        value = " ".join(str(v) for v in value)
+    return str(value or "").strip()
+
+
 def _has_release_token(value: str, token: str) -> bool:
     """Return whether a scene-release marker appears as its own token.
 
@@ -44,7 +63,7 @@ async def get_edition(video: str, bdinfo: dict[str, Any] | None, filelist: list[
     except (TypeError, ValueError):
         imdb_edition_count = len(edition_details)
 
-    if meta.category == "MOVIE" and not meta.anime and edition_details and imdb_edition_count > 1 and not manual_edition:
+    if meta.category == "MOVIE" and not meta.anime and edition_details and imdb_edition_count > 1 and not manual_edition and not _name_edition(video, filelist):
         if meta.is_disc != "BDMV" and meta.mediainfo.get("media", {}).get("track"):
             mediainfo = meta.mediainfo
             tracks = cast(list[dict[str, Any]], mediainfo.get("media", {}).get("track", []))

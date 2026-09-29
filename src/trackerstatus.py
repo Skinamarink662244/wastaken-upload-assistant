@@ -1,6 +1,7 @@
 # Upload Assistant © 2025 Audionut & wastaken7 — Licensed under UAPL v1.0
 import asyncio
 import copy
+import inspect
 import sys
 from collections.abc import Mapping
 from typing import Any, cast
@@ -31,6 +32,32 @@ class TrackerStatusManager:
     def __init__(self, config: dict[str, Any]) -> None:
         self.config = config
         self.trackers_config = cast(Mapping[str, Mapping[str, Any]], config.get("TRACKERS", {}))
+
+    async def _run_additional_checks(self, tracker_name: str, tracker: Any, meta: Meta, helper: Any) -> bool:
+        """Run tracker checks and let an attended user override a failed check.
+
+        Tracker checks deliberately remain responsible for validating tracker rules
+        and explaining failures.  The upload decision belongs here so every
+        tracker gets the same attended/unattended behaviour.
+        """
+        check = getattr(tracker, "get_additional_checks", None)
+        if check is None:
+            return True
+
+        result = await check(meta) if inspect.iscoroutinefunction(check) else check(meta)
+        if result or meta.get("unattended", False):
+            return bool(result)
+
+        if sys.stdin.closed:
+            return False
+
+        try:
+            return await helper.prompt_yes_no(
+                f"{tracker_name}: one or more upload checks failed. Do you want to proceed with the upload anyway?",
+                default=False,
+            )
+        except EOFError:
+            return False
 
     async def process_all_trackers(self, meta: Meta) -> int:
         tracker_status: dict[str, dict[str, Any]] = {}
@@ -161,17 +188,12 @@ class TrackerStatusManager:
                         local_tracker_status["skip_reason"] = "release appears to be claimed/requested on this tracker (get_torrent_claims)"
 
                     if tracker_name not in {"PASSTHEPOPCORN"} and not local_tracker_status["skipped"]:
-                        if hasattr(tracker_class, "get_additional_checks"):
-                            import inspect
-
-                            if inspect.iscoroutinefunction(tracker_class.get_additional_checks):
-                                should_continue = await tracker_class.get_additional_checks(local_meta)
-                            else:
-                                should_continue = tracker_class.get_additional_checks(local_meta)
-                            if not should_continue:
-                                local_tracker_status["skipped"] = True
+                        should_continue = await self._run_additional_checks(tracker_name, tracker_class, local_meta, helper)
+                        if not should_continue:
+                            local_tracker_status["skipped"] = True
+                            if not local_tracker_status["skip_reason"]:
                                 local_tracker_status["skip_reason"] = "failed the tracker's content/eligibility pre-checks (get_additional_checks; see its messages above)"
-                                local_meta.skipping = tracker_name
+                            local_meta.skipping = tracker_name
 
                         if not local_tracker_status["skipped"]:
                             try:
@@ -209,17 +231,12 @@ class TrackerStatusManager:
                             dupes = []
                     elif tracker_name == "PASSTHEPOPCORN":
                         ptp: Any = PassThePopcorn(config=self.config)
-                        if hasattr(ptp, "get_additional_checks"):
-                            import inspect
-
-                            if inspect.iscoroutinefunction(ptp.get_additional_checks):
-                                should_continue = await ptp.get_additional_checks(local_meta)
-                            else:
-                                should_continue = ptp.get_additional_checks(local_meta)
-                            if not should_continue:
-                                local_tracker_status["skipped"] = True
+                        should_continue = await self._run_additional_checks(tracker_name, ptp, local_meta, helper)
+                        if not should_continue:
+                            local_tracker_status["skipped"] = True
+                            if not local_tracker_status["skip_reason"]:
                                 local_tracker_status["skip_reason"] = "failed the tracker's content/eligibility pre-checks (get_additional_checks; see its messages above)"
-                                local_meta.skipping = tracker_name
+                            local_meta.skipping = tracker_name
 
                         if not local_tracker_status["skipped"]:
                             try:
@@ -257,14 +274,6 @@ class TrackerStatusManager:
                         if "initial_dupes" not in meta:
                             meta.initial_dupes = {}
                         meta.initial_dupes[tracker_name] = copy.deepcopy(dupes)
-
-                    if tracker_name == "AMIGOSSHARE" and (meta.anon if meta.anon is not None else "false"):
-                        logger.info(
-                            "PORTUGAS: [yellow]Aviso: Você solicitou um upload anônimo, mas o AMIGOSSHARE não suporta essa opção.[/yellow][red] O envio não será anônimo.[/red]"
-                        )
-                        logger.warning(
-                            "EN: [yellow]Warning: You requested an anonymous upload, but AMIGOSSHARE does not support this option.[/yellow][red] The upload will not be anonymous.[/red]"
-                        )
 
                     if ("skipping" not in local_meta or local_meta["skipping"] is None) and not local_tracker_status["skipped"]:
                         dupes = cast(list[Any], await dupe_checker.filter_dupes(dupes, local_meta, tracker_name))
