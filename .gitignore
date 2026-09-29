@@ -56,3 +56,5 @@ web_ui/static/js/node_modules/
 data/session_secret
 data/session_key
 data/sessions/
+*.log
+webui.log
