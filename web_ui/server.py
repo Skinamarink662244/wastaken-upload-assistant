@@ -242,7 +242,7 @@ def _load_argument_presets() -> list[dict[str, str]]:
             if isinstance(name, str) and isinstance(arguments, str) and name.strip() and arguments.strip():
                 presets.append({"name": name.strip(), "arguments": arguments.strip()})
         return presets[-MAX_ARGUMENT_PRESETS:]
-    except OSError, TypeError, ValueError:
+    except (OSError, TypeError, ValueError):
         return []
 
 
@@ -709,6 +709,11 @@ def _is_ip_allowed(ip: str) -> bool:
 
 def _handle_failed_auth(ip: str) -> None:
     """Handle failed authentication attempt. Track failures and blacklist if too many."""
+    # Never auto-blacklist loopback. Behind a same-host reverse proxy (e.g.
+    # `tailscale serve`) every client appears as 127.0.0.1/::1, so blacklisting
+    # it would lock out everyone, including the operator, and protects nothing.
+    if ip in ("127.0.0.1", "::1", "localhost"):
+        return
     # Configuration: threshold and window (seconds)
     failure_threshold = 5
     failure_window = 300  # 5 minutes
@@ -1131,7 +1136,7 @@ def _verify_remember_token(token: str) -> str | None:
         elif isinstance(expiry_value, str):
             try:
                 expiry = int(expiry_value)
-            except TypeError, ValueError:
+            except (TypeError, ValueError):
                 return None
         else:
             return None
@@ -1324,14 +1329,14 @@ def _terminate_process_tree(process: _WebUIProcess, timeout: float = 2.0) -> boo
 
     try:
         root = psutil.Process(process.pid)
-    except psutil.NoSuchProcess, psutil.AccessDenied, OSError:
+    except (psutil.NoSuchProcess, psutil.AccessDenied, OSError):
         return process.poll() is not None
 
     # Snapshot descendants before stopping the controller: once the controller
     # exits, its children may be re-parented and become impossible to identify.
     try:
         processes = root.children(recursive=True)
-    except psutil.NoSuchProcess, psutil.AccessDenied, OSError:
+    except (psutil.NoSuchProcess, psutil.AccessDenied, OSError):
         processes = []
     processes.append(root)
 
@@ -1531,7 +1536,7 @@ def _format_preview_size(value: object) -> str:
     """Return a compact binary size for a positive byte count."""
     try:
         size = int(value)
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return ""
     if size <= 0:
         return ""
@@ -2503,7 +2508,7 @@ def _find_execution_preview_cover_file(session_id: str) -> Path | None:
                 candidate.relative_to(release_root)
                 if candidate.is_file() and candidate.suffix.casefold() in {".jpg", ".jpeg", ".png", ".webp"}:
                     return candidate
-            except OSError, ValueError:
+            except (OSError, ValueError):
                 pass
 
     seen: set[str] = set()
@@ -2541,7 +2546,7 @@ def _resolve_execution_review_temp_dir(meta_data: Mapping[str, object]) -> Path 
     try:
         temp_dir = (temp_root / meta_uuid).resolve()
         temp_dir.relative_to(temp_root)
-    except OSError, ValueError:
+    except (OSError, ValueError):
         return None
     if not temp_dir.is_dir():
         return None
@@ -4181,7 +4186,7 @@ def update_status():
     )
     try:
         cache_hours = max(0.0, float(raw_cache_hours))
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         cache_hours = 4.0
 
     return jsonify(
@@ -4212,7 +4217,7 @@ def changelog():
     )
     try:
         cache_hours = max(0.0, float(raw_cache_hours))
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         cache_hours = 4.0
 
     return jsonify(
@@ -4365,7 +4370,7 @@ def access_log_entries_api():
         n = int(n)
         if n < 1 or n > 200:
             n = 50
-    except ValueError, TypeError:
+    except (ValueError, TypeError):
         n = 50
 
     try:
@@ -4531,7 +4536,7 @@ def twofa_disable():
 
     try:
         auth_mod.set_twofa_state(None, [])
-    except OSError, ValueError, TypeError, auth_mod.EncryptionError, json.JSONDecodeError:
+    except (OSError, ValueError, TypeError, auth_mod.EncryptionError, json.JSONDecodeError):
         return jsonify({"error": "Failed to disable 2FA", "success": False}), 500
 
     # Update global variable
@@ -4902,7 +4907,7 @@ def _configured_cookie_tracker_names(
     for tracker_name in supported_trackers:
         try:
             has_cookie_file = Path(cookie_file_finder(str(state_dir), tracker_name, user_config)).is_file()
-        except AttributeError, OSError, TypeError, ValueError:
+        except (AttributeError, OSError, TypeError, ValueError):
             has_cookie_file = False
         if has_cookie_file:
             configured.add(tracker_name.upper())
@@ -6073,7 +6078,7 @@ def browse_path():
                             "size": size,
                         }
                     )
-                except PermissionError, OSError:
+                except (PermissionError, OSError):
                     continue
 
             console.print(f"Found {len(items)} items in {path}", markup=False)
@@ -6113,7 +6118,7 @@ def browse_search():
         max_results = min(int(request.args.get("max_results", "100")), 500)
         if max_results < 1:
             max_results = 100
-    except ValueError, TypeError:
+    except (ValueError, TypeError):
         max_results = 100
 
     if not query:
