@@ -34,30 +34,22 @@ class TrackerStatusManager:
         self.trackers_config = cast(Mapping[str, Mapping[str, Any]], config.get("TRACKERS", {}))
 
     async def _run_additional_checks(self, tracker_name: str, tracker: Any, meta: Meta, helper: Any) -> bool:
-        """Run tracker checks and let an attended user override a failed check.
+        """Run a tracker's additional checks and return whether it passed.
 
-        Tracker checks deliberately remain responsible for validating tracker rules
-        and explaining failures.  The upload decision belongs here so every
-        tracker gets the same attended/unattended behaviour.
+        Trackers are responsible for validating their own rules, explaining any
+        failure, and (when attended) prompting the user to override. A False
+        result is therefore final here: we skip the tracker without asking a
+        second, redundant confirmation.
         """
         check = getattr(tracker, "get_additional_checks", None)
         if check is None:
             return True
 
         result = await check(meta) if inspect.iscoroutinefunction(check) else check(meta)
-        if result or meta.get("unattended", False):
-            return bool(result)
-
-        if sys.stdin.closed:
-            return False
-
-        try:
-            return await helper.prompt_yes_no(
-                f"{tracker_name}: one or more upload checks failed. Do you want to proceed with the upload anyway?",
-                default=False,
-            )
-        except EOFError:
-            return False
+        # A failed check is final: the tracker has already explained the failure
+        # and (when attended) prompted the user itself, so we do not ask a second,
+        # redundant confirmation here. False => skip this tracker.
+        return bool(result)
 
     async def process_all_trackers(self, meta: Meta) -> int:
         tracker_status: dict[str, dict[str, Any]] = {}
