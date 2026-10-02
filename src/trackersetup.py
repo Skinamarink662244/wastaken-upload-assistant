@@ -503,7 +503,13 @@ class TrackerSetup:
         if "taoe" in group_tags:
             group_tags = "taoe"
 
-        if tracker.upper() in ("AITHER", "CAPYBARABR", "LST", "LUMINARR", "SPEEDAPP", "ZENITH", "TORRENTHAVEN"):
+        # Live banned-group check runs for any tracker that exposes a banned
+        # endpoint (banned_url), using its already-configured api_key — no
+        # hardcoded allowlist to maintain. LUMINARR has no endpoint but syncs
+        # TRaSH groups to a file, so it is included explicitly.
+        _bg_instance = self._create_tracker_instance(tracker)
+        _uses_banned_api = _bg_instance is not None and isinstance(getattr(_bg_instance, "banned_url", None), str)
+        if _uses_banned_api or tracker.upper() == "LUMINARR":
             file_path = await self.get_banned_groups(meta, tracker)
             if file_path == "empty":
                 logger.info(f"[bold red]No banned groups found for '{tracker}'.")
