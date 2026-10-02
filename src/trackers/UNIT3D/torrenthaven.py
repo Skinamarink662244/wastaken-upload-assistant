@@ -17,7 +17,6 @@ class TorrentHaven(UNIT3D):
     display_name = "TorrentHaven"
     base_url = "https://torrenthaven.org"
     banned_groups = ()
-    banned_url = f"{base_url}/api/banned-groups"
     id_url = f"{base_url}/api/torrents/"
     upload_url = f"{base_url}/api/torrents/upload"
     requests_url = f"{base_url}/api/requests/filter"

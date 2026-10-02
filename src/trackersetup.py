@@ -164,6 +164,28 @@ JsonDict = dict[str, Any]
 example_config: dict[str, Any]
 
 
+def _release_group_from_name(name: str) -> str | None:
+    """Return a trailing "-GROUP" release group from a release name, or None.
+
+    Mirrors how UNIT3D matches banned groups (a group at the very end of the
+    name). Used as a fallback when meta.tag is empty because UA's parser dropped
+    a group that followed a technical token such as "x264.DTS-FGT". Returns None
+    when the name does not end in a group, so technical suffixes like
+    "DTS-HD.MA.5.1" never false-match.
+    """
+    name = (name or "").strip()
+    if not name:
+        return None
+    name = re.sub(r"\.(mkv|mp4|avi|m2ts|ts|iso|torrent)$", "", name, flags=re.IGNORECASE)
+    prev = None
+    while prev != name:
+        prev = name
+        name = re.sub(r"\s*(\[[^\]]*\]|\([^)]*\))\s*$", "", name)
+        name = name.rstrip(" .")
+    m = re.search(r"-([A-Za-z0-9]+)$", name)
+    return m.group(1) if m else None
+
+
 class TrackerSetup:
     def __init__(self, config: dict[str, Any]):
         self.config: dict[str, Any] = config
@@ -459,10 +481,25 @@ class TrackerSetup:
 
     async def check_banned_group(self, tracker: str, banned_group_list: list[Any], meta: Meta) -> bool:
         result = False
-        if not meta.tag:
+        tag = (meta.tag or "").lstrip("-")
+        if not tag:
+            # UA's parser can drop a group that follows a technical token
+            # (e.g. "x264.DTS-FGT" -> no group), which would silently skip the
+            # banned-group check. Fall back to the release-name suffix.
+            for _cand in (
+                getattr(meta, "scene_name", "") or "",
+                getattr(meta, "basename_no_ext", "") or "",
+                Path(getattr(meta, "path", "") or "").name,
+                getattr(meta, "uuid", "") or "",
+            ):
+                _g = _release_group_from_name(_cand)
+                if _g:
+                    tag = _g
+                    break
+        if not tag:
             return False
 
-        group_tags = meta.tag[1:].lower()
+        group_tags = tag.lower()
         if "taoe" in group_tags:
             group_tags = "taoe"
 
@@ -497,14 +534,14 @@ class TrackerSetup:
                     continue
                 tag_name = tag_list[0]
                 if group_tags == tag_name.lower():
-                    logger.info(f"[bold yellow]{meta.tag[1:]}[/bold yellow][bold red] was found on [bold yellow]{tracker}'s[/bold yellow] list of banned groups.")
+                    logger.info(f"[bold yellow]{tag}[/bold yellow][bold red] was found on [bold yellow]{tracker}'s[/bold yellow] list of banned groups.")
                     if len(tag_list) > 1:
                         logger.info(f"[bold red]NOTE: [bold yellow]{tag_list[1]}")
                     result = True
             else:
                 tag_name = str(tag)
                 if group_tags == tag_name.lower():
-                    logger.info(f"[bold yellow]{meta.tag[1:]}[/bold yellow][bold red] was found on [bold yellow]{tracker}'s[/bold yellow] list of banned groups.")
+                    logger.info(f"[bold yellow]{tag}[/bold yellow][bold red] was found on [bold yellow]{tracker}'s[/bold yellow] list of banned groups.")
                     result = True
 
         if result:
