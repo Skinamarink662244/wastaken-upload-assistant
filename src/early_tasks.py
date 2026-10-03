@@ -126,7 +126,7 @@ async def create_base_torrents_early(meta: Meta, client: Clients) -> None:
                 meta.reuse_torrent_path = reuse_torrent
                 logger.debug("[cyan]Creating torrent from the client copy while metadata and screenshots are processed.[/cyan]")
                 base_creation_started = time.perf_counter()
-                created_path = await TorrentCreator.create_base_from_existing_torrent(reuse_torrent, meta.base_dir, meta.uuid)
+                created_path = await TorrentCreator.create_base_from_existing_torrent(reuse_torrent, meta.base_dir, meta.uuid, meta.source_size)
                 logger.debug(f"[cyan]Early base torrent creation completed in {time.perf_counter() - base_creation_started:.2f}s: {created_path or 'no file created'}[/cyan]")
         if manifest.default_path("base") is None:
             # No local/client copy — search configured trackers and reuse an
