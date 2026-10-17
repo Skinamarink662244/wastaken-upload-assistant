@@ -30,6 +30,24 @@ def merge_tracker_status(processed: dict[str, dict[str, Any]], existing: Mapping
     return merged
 
 
+def _same_content_size(candidate_size: Any, source_size: int, tolerance: float) -> bool:
+    """True when a tracker torrent is the same content as our upload by size.
+
+    Renaming a release changes its name, not its bytes, so an exact total-size
+    match means the same content under a different name. ``tolerance`` (fraction)
+    loosens this if ever needed; 0 means an exact byte match.
+    """
+    try:
+        size = int(candidate_size)
+    except (TypeError, ValueError):
+        return False
+    if size <= 0 or source_size <= 0:
+        return False
+    if tolerance <= 0:
+        return size == source_size
+    return abs(size - source_size) <= source_size * tolerance
+
+
 class TrackerStatusManager:
     def __init__(self, config: dict[str, Any]) -> None:
         self.config = config
@@ -52,6 +70,47 @@ class TrackerStatusManager:
         # and (when attended) prompted the user itself, so we do not ask a second,
         # redundant confirmation here. False => skip this tracker.
         return bool(result)
+
+    def _augment_size_matched_dupes(self, dupes: list[Any], meta: Meta, tracker_name: str) -> list[Any]:
+        """Re-include any existing torrent whose total size matches the upload.
+
+        The name-based dupe filter can drop a renamed-but-identical release
+        (e.g. a stripped group tag), which would let it upload as a trump/dupe.
+        Identical content means identical size, so such candidates are added
+        back here so they still trigger the normal "proceed? (y/N)" dupe prompt.
+        """
+        try:
+            source_size = int(getattr(meta, "source_size", 0) or 0)
+            if not source_size:
+                return dupes
+            initial = getattr(meta, "initial_dupes", None)
+            raw = initial.get(tracker_name) if isinstance(initial, dict) else None
+            if not raw:
+                return dupes
+            try:
+                tolerance = float((self.config.get("DEFAULT", {}) or {}).get("trump_size_tolerance", 0.0) or 0.0)
+            except (TypeError, ValueError):
+                tolerance = 0.0
+            have = {str(d.get("name", "")).strip().lower() for d in dupes if isinstance(d, dict)}
+            out = list(dupes)
+            for cand in raw:
+                if not isinstance(cand, dict):
+                    continue
+                name = str(cand.get("name", "")).strip()
+                if not name or name.lower() in have:
+                    continue
+                if _same_content_size(cand.get("size"), source_size, tolerance):
+                    logger.info(
+                        f"[bold yellow]{tracker_name}:[/bold yellow] existing torrent "
+                        f"[yellow]{name}[/yellow] has the same size as your upload — likely the "
+                        f"same release under a different name; flagging it as a potential dupe."
+                    )
+                    out.append(cand)
+                    have.add(name.lower())
+            return out
+        except Exception as e:  # noqa: BLE001 - safety net must never break the run
+            logger.debug(f"size-based dupe safety net skipped for {tracker_name}: {e}")
+            return dupes
 
     async def process_all_trackers(self, meta: Meta) -> int:
         tracker_status: dict[str, dict[str, Any]] = {}
@@ -286,6 +345,10 @@ class TrackerStatusManager:
 
                     if ("skipping" not in local_meta or local_meta["skipping"] is None) and not local_tracker_status["skipped"]:
                         dupes = cast(list[Any], await dupe_checker.filter_dupes(dupes, local_meta, tracker_name))
+
+                        # Re-include any existing torrent whose total size matches ours: a
+                        # renamed-but-identical release can be dropped by the name-based filter.
+                        dupes = self._augment_size_matched_dupes(dupes, local_meta, tracker_name)
 
                         # Run dupe check first so it can modify local_meta (e.g., set cross-seed values)
                         is_dupe, local_meta = await helper.dupe_check(dupes, local_meta, tracker_name)
