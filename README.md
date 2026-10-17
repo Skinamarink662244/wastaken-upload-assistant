@@ -3,7 +3,7 @@
   <h1>Upload-Assistant</h1>
   <p>Streamline media preparation and uploads across private trackers & usenet indexers.</p>
 
-[![Python Version](https://img.shields.io/badge/Python-3.14%2B-blue?logo=python&logoColor=white)](https://www.python.org/) [![License](https://img.shields.io/badge/License-UAPL%20v1.0-orange)](LICENSE) [![Ruff](https://img.shields.io/badge/Ruff-000000?logo=ruff&logoColor=white)](https://github.com/astral-sh/ruff) [![Pyright](https://img.shields.io/badge/Pyright-strict-brightgreen)](https://github.com/microsoft/pyright) [![code style: prettier](https://img.shields.io/badge/code%20style-prettier-ff69b4.svg)](https://prettier.io) [![Docker Image CI](https://github.com/wastaken7/Upload-Assistant/actions/workflows/docker-image.yml/badge.svg)](https://github.com/wastaken7/Upload-Assistant/actions/workflows/docker-image.yml)
+[![Python Version](https://img.shields.io/badge/Python-3.14%2B-blue?logo=python&logoColor=white)](https://www.python.org/) [![License](https://img.shields.io/badge/License-UAPL%20v1.0-orange)](LICENSE) [![Ruff](https://img.shields.io/badge/Ruff-000000?logo=ruff&logoColor=white)](https://github.com/astral-sh/ruff) [![Pyright](https://img.shields.io/badge/Pyright-strict-brightgreen)](https://github.com/microsoft/pyright) [![code style: prettier](https://img.shields.io/badge/code%20style-prettier-ff69b4.svg)](https://prettier.io) [![Docker Image CI](https://github.com/Skinamarink662244/wastaken-upload-assistant/actions/workflows/docker-image.yml/badge.svg)](https://github.com/Skinamarink662244/wastaken-upload-assistant/actions/workflows/docker-image.yml)
 
 ---
 
@@ -227,7 +227,7 @@ These instructions cover Windows, Linux, and macOS.
 2. Install Upload Assistant:
 
    ```bash
-   uv tool install upload-assistant
+   uv tool install git+https://github.com/Skinamarink662244/wastaken-upload-assistant.git
    ```
 
 `uv` creates an isolated environment and installs a compatible Python version (3.14 or newer) if needed. It makes the `ua` command available from any directory. If the command is not found, run `uv tool update-shell` and open a new terminal.
@@ -237,7 +237,7 @@ These instructions cover Windows, Linux, and macOS.
 To install the latest development version from GitHub instead of the published release, use:
 
 ```bash
-uv tool install git+https://github.com/wastaken7/Upload-Assistant.git
+uv tool install git+https://github.com/Skinamarink662244/wastaken-upload-assistant.git
 ```
 
 ---
@@ -269,11 +269,11 @@ Open the generated `config.py` in a text editor (like Notepad++, VS Code, or Tex
 
 - Check out our [Wiki Help Page](docs/home.md).
 - Need a no-root Linux or seedbox setup? See [Seedbox / Linux Install](docs/seedbox.md).
-- Found an issue or need help? Please [open a GitHub Issue](https://github.com/wastaken7/Upload-Assistant/issues) so we can track and resolve it. If you prefer not to create a GitHub account for privacy reasons, join our [Signal group](https://signal.group/#CjQKILmkUCLe5mZULkQGI6B5knmX1ytrIBFicpJ_NZGAHmOrEhDD5F7ctp-obLeLOsa0yCoJ) instead.
+- Found an issue or need help? Please [open a GitHub Issue](https://github.com/Skinamarink662244/wastaken-upload-assistant/issues) so we can track and resolve it. If you prefer not to create a GitHub account for privacy reasons, join our [Signal group](https://signal.group/#CjQKILmkUCLe5mZULkQGI6B5knmX1ytrIBFicpJ_NZGAHmOrEhDD5F7ctp-obLeLOsa0yCoJ) instead.
 
 ## **Updating:**
 
-Run `uv tool upgrade upload-assistant` to update the published installation. If you installed the development version from GitHub, run `uv tool install --force git+https://github.com/wastaken7/Upload-Assistant.git` to fetch it again. On the next start, Upload Assistant adds missing general settings from [`data/example_config.py`](data/example_config.py) without changing existing values. Tracker/client sections and optional cache-service/tag overrides are left untouched so omitted settings continue to inherit their defaults. Add new tracker/client options manually when needed. A timestamped backup is created beside `config.py` whenever this automatic update changes the file.
+Run `uv tool install --force git+https://github.com/Skinamarink662244/wastaken-upload-assistant.git` to update the published installation. If you installed the development version from GitHub, run `uv tool install --force git+https://github.com/Skinamarink662244/wastaken-upload-assistant.git` to fetch it again. On the next start, Upload Assistant adds missing general settings from [`data/example_config.py`](data/example_config.py) without changing existing values. Tracker/client sections and optional cache-service/tag overrides are left untouched so omitted settings continue to inherit their defaults. Add new tracker/client options manually when needed. A timestamped backup is created beside `config.py` whenever this automatic update changes the file.
 
 ## **CLI Usage:**
 
@@ -323,4 +323,4 @@ Features automated binary managers for:
 
 ## **Contributors:**
 
-[![Contributors](https://contrib.rocks/image?repo=wastaken7/Upload-Assistant)](https://github.com/wastaken7/Upload-Assistant/graphs/contributors)
+[![Contributors](https://contrib.rocks/image?repo=Skinamarink662244/wastaken-upload-assistant)](https://github.com/Skinamarink662244/wastaken-upload-assistant/graphs/contributors)

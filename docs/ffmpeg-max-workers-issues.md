@@ -6,7 +6,7 @@ One method to check is below:
 `which ffmpeg` -v quiet -hide_banner -version | grep -q -- --enable-libzimg && echo "FFmpeg compiled with libzimg" || echo "FFmpeg not compiled with libzimg"
 ```
 
-Since UA version 5.2.0, you can now provide a static binary for UA to use. Create a folder named `ffmpeg` within the UA bin directory: https://github.com/wastaken7/Upload-Assistant/tree/development/bin
+Since UA version 5.2.0, you can now provide a static binary for UA to use. Create a folder named `ffmpeg` within the UA bin directory: https://github.com/Skinamarink662244/wastaken-upload-assistant/tree/development/bin
 
 And place the ffmpeg binary `ffmpeg` within this folder.
 
@@ -32,4 +32,4 @@ ppkhoa says:
 > export PATH="/home/ppkhoa/ffmpeg-master-latest-linux64-gpl/bin:$PATH"
 > ```
 
-Continued issue may be resolved by setting `use_libplacebo` to `False` in config https://github.com/wastaken7/Upload-Assistant/blob/development/data/example_config.py#L82
+Continued issue may be resolved by setting `use_libplacebo` to `False` in config https://github.com/Skinamarink662244/wastaken-upload-assistant/blob/development/data/example_config.py#L82

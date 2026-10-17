@@ -6,7 +6,7 @@
 2. In PowerShell or Command Prompt, install Upload Assistant:
 
    ```powershell
-   uv tool install upload-assistant
+   uv tool install git+https://github.com/Skinamarink662244/wastaken-upload-assistant.git
    ```
 
 3. If `uv` reports that its tool directory is not on your `PATH`, run `uv tool update-shell` and open a new terminal.
@@ -34,7 +34,7 @@ ua --help
 Update the installed version:
 
 ```powershell
-uv tool upgrade upload-assistant
+uv tool install --force git+https://github.com/Skinamarink662244/wastaken-upload-assistant.git
 ```
 
 If Windows does not recognize `ua`, run `uv tool update-shell` and open a new terminal.

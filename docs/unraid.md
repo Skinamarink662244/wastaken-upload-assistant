@@ -19,9 +19,9 @@ After that enable this packages
 
 ```text
 2. open a terminal on unraid, cd to the directory you want to install Upload Assistant or make a directory.
-"git clone https://github.com/wastaken7/Upload-Assistant.git" run the command,
+"git clone https://github.com/Skinamarink662244/wastaken-upload-assistant.git" run the command,
 the other stuff is standard steps you have to follow as per audionuts guide that can be found
-here https://github.com/wastaken7/Upload-Assistant
+here https://github.com/Skinamarink662244/wastaken-upload-assistant
 ```
 
 ```text
@@ -97,7 +97,7 @@ Next replace it with
 ```yaml
 services:
   upload-assistant-cli:
-    image: ghcr.io/wastaken7/upload-assistant:latest
+    image: ghcr.io/skinamarink662244/wastaken-upload-assistant:development
     container_name: upload-assistant-cli
     restart: unless-stopped
     networks:

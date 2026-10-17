@@ -232,7 +232,7 @@ Frame rate                     : 23.976 (24000/1001) FPS
 [center][url=https://placehold.co/622x350][img=350]https://placehold.co/622x350[/img][/url] [url=https://placehold.co/622x350][img=350]https://placehold.co/622x350[/img][/url]
 [url=https://placehold.co/622x350][img=350]https://placehold.co/622x350[/img][/url] [url=https://placehold.co/622x350][img=350]https://placehold.co/622x350[/img][/url][/center]
 
-[right][url=https://github.com/wastaken7/Upload-Assistant][size=4]Upload-Assistant[/size][/url][/right]
+[right][url=https://github.com/Skinamarink662244/wastaken-upload-assistant][size=4]Upload-Assistant[/size][/url][/right]
 ```
 
 ### Example 2: TV Episode (TV Category)
@@ -250,7 +250,7 @@ Frame rate                     : 23.976 (24000/1001) FPS
 [center][b]Screenshots:[/b][/center]
 [center][url=https://placehold.co/622x350][img=350]https://placehold.co/622x350[/img][/url] [url=https://placehold.co/622x350][img=350]https://placehold.co/622x350[/img][/url][/center]
 
-[right][url=https://github.com/wastaken7/Upload-Assistant][size=4]Upload-Assistant[/size][/url][/right]
+[right][url=https://github.com/Skinamarink662244/wastaken-upload-assistant][size=4]Upload-Assistant[/size][/url][/right]
 ```
 
 ### Example 3: Game Release (GAME Category)

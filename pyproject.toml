@@ -85,10 +85,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/wastaken7/Upload-Assistant"
-Documentation = "https://github.com/wastaken7/Upload-Assistant/tree/master/docs"
-Issues = "https://github.com/wastaken7/Upload-Assistant/issues"
-Source = "https://github.com/wastaken7/Upload-Assistant"
+Homepage = "https://github.com/Skinamarink662244/wastaken-upload-assistant"
+Documentation = "https://github.com/Skinamarink662244/wastaken-upload-assistant/tree/master/docs"
+Issues = "https://github.com/Skinamarink662244/wastaken-upload-assistant/issues"
+Source = "https://github.com/Skinamarink662244/wastaken-upload-assistant"
 
 [build-system]
 requires = ["setuptools>=83"]

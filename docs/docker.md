@@ -24,7 +24,7 @@ Docker will automatically pull the correct image for your system architecture.
 docker run --rm -it --network=host \
 -v /full/path/to/appdata:/state \
 -v /full/path/to/downloads:/downloads \
-ghcr.io/wastaken7/upload-assistant:latest /downloads/path/to/content --help
+ghcr.io/skinamarink662244/wastaken-upload-assistant:development /downloads/path/to/content --help
 ```
 
 `/state` is the container's persistent, writable application-state root. It holds `data/config.py`, cookies, caches and temporary upload artifacts. Mount a directory, not a single `config.py` file. On the first Web UI or CLI upload run, the application creates `/state/data/config.py` from the bundled example. A first CLI run stops so you can edit the file before retrying; the Web UI continues to its configuration page. The paths in your config file need to refer to paths inside the docker image, same with path provided for file. May need to utilize remote path mapping for your client.
@@ -38,7 +38,7 @@ docker run --rm -it --network=host \
 -v /full/path/to/appdata:/state \
 -v /full/path/to/downloads:/downloads \
 -v /full/path/to/BT_backup:/BT_backup \
-ghcr.io/wastaken7/upload-assistant:latest /downloads/path/to/content --help
+ghcr.io/skinamarink662244/wastaken-upload-assistant:development /downloads/path/to/content --help
 ```
 
 ## What if I want to utilize re-using torrents and I use rtorrent/rutorrent?
@@ -50,7 +50,7 @@ docker run --rm -it --network=host \
 -v /full/path/to/appdata:/state \
 -v /full/path/to/downloads:/downloads \
 -v /full/path/to/session/folder:/session \
-ghcr.io/wastaken7/upload-assistant:latest /downloads/path/to/content --help
+ghcr.io/skinamarink662244/wastaken-upload-assistant:development /downloads/path/to/content --help
 ```
 
 ## What is docker?
@@ -60,7 +60,7 @@ Google is your friend
 ## How do I update the docker image?
 
 ```bash
-docker pull ghcr.io/wastaken7/upload-assistant:latest
+docker pull ghcr.io/skinamarink662244/wastaken-upload-assistant:development
 # Recreate the container to run the pulled image.
 # Docker Compose: docker compose up -d
 ```
@@ -71,7 +71,7 @@ docker pull ghcr.io/wastaken7/upload-assistant:latest
 docker run --rm -it --network=host \
 -v /full/path/to/appdata:/state \
 -v /full/path/to/downloads:/downloads \
-ghcr.io/wastaken7/upload-assistant:abc123 /downloads/path/to/content --help
+ghcr.io/skinamarink662244/wastaken-upload-assistant:abc123 /downloads/path/to/content --help
 ```
 
 Where abc123 is the first 6 digits of the hash of the commit
@@ -90,8 +90,8 @@ function upload(){
         args=("$@")
         args="${args[@]@Q}"
         echo $args
-        docker pull ghcr.io/wastaken7/upload-assistant:latest
-        eval "docker run --rm -it --network=host -v /full/path/to/appdata:/state -v /full/path/to/downloads:/downloads -v /full/path/to/BT_backup:/BT_backup ghcr.io/wastaken7/upload-assistant:latest ${args}"
+        docker pull ghcr.io/skinamarink662244/wastaken-upload-assistant:development
+        eval "docker run --rm -it --network=host -v /full/path/to/appdata:/state -v /full/path/to/downloads:/downloads -v /full/path/to/BT_backup:/BT_backup ghcr.io/skinamarink662244/wastaken-upload-assistant:development ${args}"
 }
 ```
 
