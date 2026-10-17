@@ -58,3 +58,4 @@ data/session_key
 data/sessions/
 *.log
 webui.log
+web_ui/static/img/trackers/suio.png
