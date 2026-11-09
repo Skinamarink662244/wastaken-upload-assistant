@@ -1,11 +1,11 @@
 """Release and integrity pins for 7zip."""
 
-VERSION = "26.03"
+VERSION = "26.06"
 REPOSITORY = "ip7z/7zip"
 SHA256_BY_ASSET = {
-    "7z2603-linux-arm.tar.xz": "4efd099f6112b39054faea9424ded044b7bcaaf494dba49b918daa781297f57f",
-    "7z2603-linux-arm64.tar.xz": "2389ba20e4d8295e8709c20b6263b69bd1ec4972fe38a04ad7a1badbf595b996",
-    "7z2603-linux-x64.tar.xz": "dc99eff5008f1ab79bd7084c68513701547a808a89502bf4133683535ab3c695",
-    "7z2603-mac.tar.xz": "5ca87677072c59f5602e5c49baa27d4694bacd2259b4e507f0094249d4281480",
-    "7zr.exe": "ad4c82fadcbdf93c03b4fc440f300509c7d60c5c2f4d183e35d9d70d6957037d",
+    "7z2606-linux-arm.tar.xz": "aeac17d8740c10419fb15759d2831a5221e7b8c0fd3f665cb0564fcec5832c59",
+    "7z2606-linux-arm64.tar.xz": "edcc408aacce77da5223728f2eceb5e9f6dc713b8a9df934ad21e2a7f7560627",
+    "7z2606-linux-x64.tar.xz": "2b539cf067b2ad48e1baa5093dbaa8818b73542d1222a0ffde9dc5f2922ea62e",
+    "7z2606-mac.tar.xz": "b6f17920b4240940461dac8ef4009891881ac44d2a5ead625ede2ec8472185dd",
+    "7zr.exe": "e80db2dad715a6c5adabe292d31ed54e11f4e9b99ca349827b50573b175891bc",
 }
